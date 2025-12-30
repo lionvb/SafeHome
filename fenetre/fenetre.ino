@@ -1,14 +1,29 @@
+#include <WiFi.h>
+#include <HTTPClient.h>
+
+const char* ssid = "iPhone d'Arthur";
+const char* password = "nutellaa";
+const char* serverURL = "http://172.20.10.7/window";  
+
 const int trigPin = 2;
 const int echoPin = 15;
-const int btnSeuil=20;
-long int seuilDistance=0;
-long distance = 0; // Distance mesurée
+const int btnSeuil = 12;
+
+long int seuilDistance = 0;
+long distance = 0;
 
 void setup() {
   pinMode(echoPin, INPUT);
   pinMode(trigPin, OUTPUT);
-  pinMode(btnSeuil,INPUT_PULLUP);
+  pinMode(btnSeuil, INPUT_PULLUP);
   Serial.begin(9600);
+
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("Fenêtre connectée au WiFi");
 }
 
 long mesureDistance() {
@@ -18,24 +33,27 @@ long mesureDistance() {
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
   long duration = pulseIn(echoPin, HIGH);
-  return (duration / 2) * 0.0344;  // Distance en cm
+  return (duration / 2) * 0.0344;
 }
 
-void consoleDistance(long dist,long seuilDistance,bool etatAlarme) {
-  Serial.print("Distance: ");
-  Serial.print(dist);
-  Serial.print(" cm,  ");
-  Serial.print("Seuil: ");
-  Serial.print(seuilDistance);
-  Serial.print(" cm");
+void envoyerFenetreOuverte() {
+  HTTPClient http;
+  http.begin(serverURL);
+  http.addHeader("Content-Type", "application/x-www-form-urlencoded");
+  http.POST("open=1");
+  http.end();
 }
 
 void loop() {
-  distance = mesureDistance(); // mesure de distance
-  if (digitalRead(btnSeuil)==LOW){
-    seuilDistance=distance;
+  distance = mesureDistance();
+
+  if (digitalRead(btnSeuil) == LOW) {
+    seuilDistance = distance;
   }
-  if (distance>=seuilDistance+2 or distance<=seuilDistance-2){
-    Serial.print("Activé la sonnerie"); //Voir pour le transmettre à la carte principale
+
+  if (distance >= seuilDistance + 2 || distance <= seuilDistance - 2) {
+    Serial.println("Activé la sonnerie");
+    envoyerFenetreOuverte();  
+    delay(2000);               
   }
 }
